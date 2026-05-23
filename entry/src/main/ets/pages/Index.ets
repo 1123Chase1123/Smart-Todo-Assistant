@@ -1,23 +1,53 @@
 /**
  * 智能待办事项助手 - 主页面
- * 使用 @Component + @State 装饰器系统
+ * 使用 @ComponentV2 + @Local 装饰器系统，配合 @ObservedV2 + @Trace 实现深度观察
  * 包含增删改查、筛选排序、统计面板、数据持久化
  */
-import { Task } from '../model/Task';
+import { Task, Priority } from '../model/Task';
 import { taskDb } from '../utils/Database';
 import { TaskItem } from '../components/TaskItem';
 import { StatisticsPanel } from '../components/StatisticsPanel';
 
+class TaskDataSource implements IDataSource {
+  private tasks: Task[];
+  private listeners: DataChangeListener[] = [];
+
+  constructor(tasks: Task[]) {
+    this.tasks = tasks;
+  }
+
+  totalCount(): number {
+    return this.tasks.length;
+  }
+
+  getData(index: number): Task {
+    return this.tasks[index];
+  }
+
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) {
+      this.listeners.push(listener);
+    }
+  }
+
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const pos = this.listeners.indexOf(listener);
+    if (pos >= 0) {
+      this.listeners.splice(pos, 1);
+    }
+  }
+}
+
 @Entry
-@Component
+@ComponentV2
 struct Index {
-  @State tasks: Task[] = [];
-  @State filterPriority: string = 'all';
-  @State sortAscending: boolean = false;
-  @State showStats: boolean = false;
-  @State showSheet: boolean = false;
-  @State dialogName: string = '';
-  @State dialogPriority: string = 'medium';
+  @Local tasks: Task[] = [];
+  @Local filterPriority: 'all' | Priority = 'all';
+  @Local sortAscending: boolean = false;
+  @Local showStats: boolean = false;
+  @Local showSheet: boolean = false;
+  @Local dialogName: string = '';
+  @Local dialogPriority: Priority = 'medium';
   private editingTask: Task | null = null;
 
   aboutToAppear() {
@@ -43,16 +73,22 @@ struct Index {
   }
 
   filteredTasks(): Task[] {
-    const result = this.filterPriority === 'all'
-      ? [...this.tasks]
-      : this.tasks.filter(t => t.priority === this.filterPriority);
+  let result: Task[];
 
-    result.sort((a: Task, b: Task) => this.sortAscending
-      ? a.createdTime - b.createdTime
-      : b.createdTime - a.createdTime);
-
-    return result;
+  if (this.filterPriority === 'all') {
+    result = [...this.tasks];
+  } else {
+    const priority = this.filterPriority; // 这里会被收窄为 Priority
+    result = this.tasks.filter(t => t.priority === priority);
   }
+
+  result.sort((a: Task, b: Task) => this.sortAscending
+    ? a.createdTime - b.createdTime
+    : b.createdTime - a.createdTime);
+
+  return result;
+}
+
 
   toggleTask(task: Task): void {
     task.isCompleted = !task.isCompleted;
@@ -117,7 +153,7 @@ struct Index {
         .onChange((val: string) => {
           this.dialogName = val;
         })
-        .maxLength(50);
+        .maxLength(50); 
 
       Text('优先级')
         .fontSize(16)
@@ -161,7 +197,7 @@ struct Index {
   }
 
   @Builder
-  priorityBtn(value: string, label: string) {
+  priorityBtn(value: Priority, label: string) {
     Button(label)
       .backgroundColor(this.dialogPriority === value ? this.priorityColor(value) : '#F5F5F5')
       .fontColor(this.dialogPriority === value ? Color.White : '#666666')
@@ -187,7 +223,7 @@ struct Index {
   }
 
   @Builder
-  filterBtn(label: string, value: string) {
+  filterBtn(label: string, value: 'all' | Priority) {
     Button(label)
       .backgroundColor(this.filterPriority === value ? '#007AFF' : '#F0F0F0')
       .fontColor(this.filterPriority === value ? Color.White : '#666666')
@@ -200,13 +236,13 @@ struct Index {
       });
   }
 
-  priorityLabel(priority: string): string {
-    const map: Record<string, string> = { 'high': '高', 'medium': '中', 'low': '低' };
+  priorityLabel(priority: Priority): string {
+    const map: Record<Priority, string> = { 'high': '高', 'medium': '中', 'low': '低' };
     return map[priority] || '中';
   }
 
-  priorityColor(priority: string): ResourceColor {
-    const map: Record<string, ResourceColor> = {
+  priorityColor(priority: Priority): ResourceColor {
+    const map: Record<Priority, ResourceColor> = {
       'high': '#FF4444', 'medium': '#FFAA00', 'low': '#44BB44'
     };
     return map[priority] || '#FFAA00';
@@ -273,12 +309,12 @@ struct Index {
         .justifyContent(FlexAlign.Center);
       } else {
         List() {
-          ForEach(this.filteredTasks(), (task: Task) => {
+          LazyForEach(new TaskDataSource(this.filteredTasks()), (task: Task) => {
             ListItem() {
               TaskItem({
                 task: task,
-                onToggle: (t: Task): void => { this.toggleTask(t) },
-                onTap: (t: Task): void => { this.openEditDialog(t) }
+                onToggle: this.toggleTask,
+                onTap: this.openEditDialog
               })
             }
             .swipeAction({

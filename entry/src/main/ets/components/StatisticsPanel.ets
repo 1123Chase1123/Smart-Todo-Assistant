@@ -1,29 +1,42 @@
 /**
  * 统计面板组件
- * 使用 @Prop 接收父组件传递的任务数组副本
+ * 使用 @ComponentV2 + @Param 接收父组件传递的任务数组
  */
 import { Task } from '../model/Task';
 
-@Component
+@ComponentV2
 export struct StatisticsPanel {
-  @Prop tasks: Task[] = [];
+  @Param tasks: Task[] = [];
 
   build() {
-    Column() {
-      Row() {
-        this.statItem(this.tasks.length, '全部', '#666666')
-        this.divider()
-        this.statItem(this.tasks.filter(t => t.isCompleted).length, '已完成', '#44BB44')
-        this.divider()
-        this.statItem(this.tasks.filter(t => !t.isCompleted).length, '未完成', '#FF4444')
-      }
-      .width('100%')
-      .padding(16)
-      .backgroundColor('#FAFAFA')
-      .justifyContent(FlexAlign.SpaceAround);
+  const total = this.tasks.length;
+  const completed = this.tasks.filter(t => t.isCompleted).length;
+  const pending = total - completed;
+  const rate = total === 0 ? 0 : Math.round(completed * 100 / total);
+
+  Column() {
+    Row() {
+      this.statItem(total, '全部', '#666666')
+      this.divider()
+      this.statItem(completed, '已完成', '#44BB44')
+      this.divider()
+      this.statItem(pending, '未完成', '#FF4444')
     }
     .width('100%')
+    .padding(16)
+    .backgroundColor('#FAFAFA')
+    .justifyContent(FlexAlign.SpaceAround);
+
+    Text(`完成率 ${rate}%`)
+      .fontSize(13)
+      .fontColor('#666666')
+      .margin({ top: 8, bottom: 12 })
+      .width('100%')
+      .textAlign(TextAlign.Center);
   }
+  .width('100%')
+}
+
 
   @Builder
   statItem(count: number, label: string, color: ResourceColor) {

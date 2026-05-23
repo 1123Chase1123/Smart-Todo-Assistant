@@ -1,12 +1,12 @@
 /**
  * 任务列表项组件
- * 使用 @ObjectLink 引用父组件的 @Observed 对象
+ * 使用 @ComponentV2 + @Param 配合 @ObservedV2 实现深度观察
  */
-import { Task } from '../model/Task';
+import { Task, Priority } from '../model/Task';
 
-@Component
+@ComponentV2
 export struct TaskItem {
-  @ObjectLink task: Task;
+  @Param task!: Task;
   onToggle?: (task: Task) => void;
   onTap?: (task: Task) => void;
 
@@ -54,12 +54,12 @@ export struct TaskItem {
   }
 
   priorityLabel(): string {
-    const map: Record<string, string> = { 'high': '高', 'medium': '中', 'low': '低' };
+    const map: Record<Priority, string> = { 'high': '高', 'medium': '中', 'low': '低' };
     return map[this.task.priority] || '中';
   }
 
   priorityColor(): ResourceColor {
-    const map: Record<string, ResourceColor> = { 'high': '#FF4444', 'medium': '#FFAA00', 'low': '#44BB44' };
+    const map: Record<Priority, ResourceColor> = { 'high': '#FF4444', 'medium': '#FFAA00', 'low': '#44BB44' };
     return map[this.task.priority] || '#FFAA00';
   }
 

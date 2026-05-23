@@ -4,7 +4,7 @@
  * 手动修改：添加了异常处理和类型安全
  */
 import { preferences } from '@kit.ArkData';
-import { Task } from '../model/Task';
+import { Task, Priority } from '../model/Task';
 
 const PREFERENCES_NAME = 'todo_preferences';
 const TASKS_KEY = 'task_list';
@@ -12,7 +12,7 @@ const TASKS_KEY = 'task_list';
 interface TaskJson {
   id: number;
   name: string;
-  priority: string;
+  priority: Priority;
   isCompleted: boolean;
   createdTime: number;
 }

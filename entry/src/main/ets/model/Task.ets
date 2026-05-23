@@ -1,16 +1,17 @@
 /**
  * Task data model
- * 使用 @Observed 装饰器使所有属性可观察
+ * 使用 @ObservedV2 + @Trace 实现属性级深度观察
  */
-@Observed
+export type Priority = 'high' | 'medium' | 'low';
+@ObservedV2
 export class Task {
-  id: number;
-  name: string;
-  priority: string;
-  isCompleted: boolean;
-  createdTime: number;
+  @Trace id: number = 0;
+  @Trace name: string = '';
+  @Trace priority: Priority = 'medium';
+  @Trace isCompleted: boolean = false;
+  @Trace createdTime: number = 0;
 
-  constructor(name: string, priority: string = 'medium') {
+  constructor(name: string, priority: Priority = 'medium') {
     this.id = Date.now();
     this.name = name;
     this.priority = priority;
